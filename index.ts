@@ -1,7 +1,8 @@
 #!/usr/bin/env -S deno run --unstable --allow-write --allow-read --allow-env
+import {decode} from 'https://deno.land/std@v0.51.0/encoding/utf8.ts';
 
 import {App} from './src/App.ts';
-import {decode} from "https://deno.land/std@v0.51.0/encoding/utf8.ts";
+import {print} from './src/print.ts';
 
 const [operation, argument] = Deno.args;
 
@@ -10,7 +11,7 @@ enum Operation {
     'done' = 'done',
     'undone' = 'undone',
     'remove' = 'remove',
-    'show' = 'show',
+    'ls' = 'ls',
     'help' = 'help',
 }
 
@@ -33,18 +34,31 @@ switch (operation) {
         app.remove(parseInt(argument, 10));
         break;
 
-    case Operation.show :
-        await app.show();
+    case Operation.ls :
+        await app.list(false);
         break;
 
     case Operation.help:
-        console.log('help');
+        await print(
+            `
+run without params:
+- to work in interactive mode
+
+run with params:
+ls - to show list of tasks
+
+add "task"   - to add task
+done index   - to check task as done
+undone index - to check task as undone
+remove index - to remove task
+`
+        );
         break;
 
     case undefined:
     default:
         while (true) {
-            await app.show();
+            await app.list(true);
             const buffer = new Uint8Array(3);
             Deno.setRaw(0, true);
             await Deno.stdin.read(buffer);

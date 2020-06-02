@@ -8,7 +8,8 @@ import {
 
 import { Collection } from './Collection.ts';
 import { Task } from './models/Task.ts';
-import { print } from './print.ts';
+import {print, printInteractive} from './print.ts';
+import {leftpad} from "./leftpad.ts";
 
 export class App {
     private collection: Collection<Task>;
@@ -67,16 +68,29 @@ export class App {
         this.activeIndex = (this.activeIndex + 1) % this.collection.count;
     }
 
-    async show() {
+    async list(interactive = false) {
         const tasks = this.collection.getAll();
+
+        const title = `${bold('TODO:')}`;
+
         const list = tasks.map((task, index) => {
-            const checkbox = task.isDone ? green('[*]') : red('[ ]');
             const isActive = this.activeIndex === index;
+            const number = yellow(leftpad(index.toString(), 2, '0'));
+            const checkbox = task.isDone ? green('[*]') : red('[ ]');
+            const title = isActive ? bold(task.title) : task.title;
 
-            return `${yellow(task.id.toString())} ${checkbox} ${isActive ? bold(task.title) : task.title}`
-        })
-            .join('\n');
+            return `${number} ${checkbox} ${title}`
+        });
 
-        await print(list);
+        const lines = [
+            title,
+            ...list,
+        ].join('\n');
+
+        if (interactive) {
+            await printInteractive(lines);
+        } else {
+            await print(lines);
+        }
     }
 }

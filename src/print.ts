@@ -1,6 +1,10 @@
 import { clearDown, goUp, goLeft, write } from "https://denopkg.com/iamnathanj/cursor@v2.0.0/mod.ts";
 
 export async function print(message: string) {
+    await write(message + '\n');
+}
+
+export async function printInteractive(message: string) {
     const lines = message.split("\n");
     const numberOfLines = lines.length;
     const lengthOfLastLine = lines[numberOfLines - 1].length;
