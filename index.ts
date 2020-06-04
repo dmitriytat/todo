@@ -1,5 +1,5 @@
 #!/usr/bin/env -S deno run --unstable --allow-write --allow-read --allow-env
-import {decode} from 'https://deno.land/std@v0.51.0/encoding/utf8.ts';
+import { readKeypress } from 'https://raw.githubusercontent.com/dmitriytat/keypress/0.0.1/mod.ts';
 
 import {App} from './src/App.ts';
 import {print} from './src/print.ts';
@@ -59,25 +59,23 @@ remove index - to remove task
     default:
         while (true) {
             await app.list(true);
-            const buffer = new Uint8Array(3);
-            Deno.setRaw(0, true);
-            await Deno.stdin.read(buffer);
-            Deno.setRaw(0, false);
 
-            const key = decode(buffer);
+            const events = await readKeypress();
 
-            if (key === '\u001B\u005B\u0041') {
-                app.up();
-            } else if (key === '\u001B\u005B\u0043') {
-                app.down();
-            } else if (key === '\u001B\u005B\u0042') {
-                app.down();
-            } else if (key === '\u001B\u005B\u0044') {
-                app.up();
-            } else if (key.charAt(0) === ' ') {
-                app.toggleCurrent();
-            } else if (key.charAt(0) === '\u0003') {
-                break;
-            }
+            events.forEach(event => {
+                if (event.key === 'up') {
+                    app.up();
+                } else if (event.key === 'down') {
+                    app.down();
+                } else if (event.key === 'right') {
+                    app.down();
+                } else if (event.key === 'left') {
+                    app.up();
+                } else if (event.key === 'space') {
+                    app.toggleCurrent();
+                } else if (event.ctrlKey && event.key === 'c') {
+                    Deno.exit(0)
+                }
+            })
         }
 }
