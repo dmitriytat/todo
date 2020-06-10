@@ -1,111 +1,129 @@
-import {Task} from './Task.ts';
-import {print, printInteractive} from './utils/print.ts';
-import {leftPad} from "./utils/leftPad.ts";
-import {bold, green, red, yellow} from "../dep.ts";
-import {toolbar} from "../ui.ts";
+import { Task } from "./Task.ts";
+import { formatTaskList } from "./utils/ui.ts";
+import { Data } from "./Data.ts";
+import { Terminal } from "./Terminal.ts";
 
 export class Todo {
-    private tasks: Task[] = [];
     private currentIndex: number = 0;
 
-    constructor(private file: string = 'tasks.json') {
-        this.read();
-    }
+    constructor(private data: Data<Task>, private terminal: Terminal) {}
 
-    getCurrent() {
-        return this.tasks[this.currentIndex];
-    }
-
-    read() {
-        let tasks = [];
-        try {
-            const data = Deno.readTextFileSync(this.file);
-            tasks = JSON.parse(data);
-        } catch (e) {
-        } finally {
-            this.tasks = tasks;
-        }
-    }
-
-    write() {
-        const data = JSON.stringify(this.tasks);
-        Deno.writeTextFileSync(this.file, data);
+    get current() {
+        return this.data.get(this.currentIndex);
     }
 
     up() {
-        this.currentIndex = this.currentIndex ? this.currentIndex - 1 : this.tasks.length - 1;
+        this.currentIndex = this.currentIndex === 0
+            ? this.data.count() - 1
+            : this.currentIndex - 1;
     }
 
     down() {
-        this.currentIndex = this.currentIndex === this.tasks.length - 1 ? 0 : this.currentIndex + 1;
+        this.currentIndex = this.currentIndex === this.data.count() - 1
+            ? 0
+            : this.currentIndex + 1;
     }
 
-    async add(title: string): Promise<void> {
-        this.tasks.push({ title, isDone: false });
-
-        this.write();
-    }
-
-    async list(interactive = false) {
-        const doCount = this.tasks.filter(task => !task.isDone).length;
-
-        const title = `${bold('TODO:')} ${doCount}`;
-
-        const list = this.tasks.map((task, index) => {
-            const isActive = this.currentIndex === index;
-            const number = yellow(leftPad(index.toString(), 2, '0'));
-            const checkbox = task.isDone ? green('[*]') : red('[ ]');
-            const title = isActive ? bold(task.title) : task.title;
-
-            return `${number} ${checkbox} ${title}`
-        });
-
-        const lines = [
-            title,
-            ...list,
-            toolbar,
-        ].join('\n');
+    async list(interactive: boolean = false) {
+        const tasks = this.data.getAll();
+        const list = formatTaskList(tasks, interactive, this.currentIndex);
 
         if (interactive) {
-            await printInteractive(lines);
+            await this.terminal.printInteractive(list);
         } else {
-            await print(lines);
+            await this.terminal.printLines(list);
         }
     }
 
-    toggle() {
-        const task = this.tasks[this.currentIndex];
+    toggle(index: number = this.currentIndex) {
+        const task = this.data.get(index);
 
         if (task) {
             task.isDone = !task.isDone;
-            this.write();
+            this.data.save();
         }
     }
 
+
     done(index: number = this.currentIndex): void {
-        const task = this.tasks[index];
+        const task = this.data.get(index);
 
         if (task) {
             task.isDone = true;
-            this.write();
+            this.data.save();
         }
     }
 
     undone(index: number = this.currentIndex): void {
-        const task = this.tasks[index];
+        const task = this.data.get(index);
 
         if (task) {
             task.isDone = false;
-            this.write();
+            this.data.save();
         }
     }
 
-    remove(index: number = this.currentIndex): void {
-        this.tasks = [
-            ...this.tasks.slice(0, index - 1),
-            ...this.tasks.slice(index),
-        ];
+    add(title: string) {
+        if (!title) {
+            return;
+        }
 
-        this.write();
+        this.data.add({
+            title,
+            isDone: false,
+        });
+    }
+
+    edit(index: number, title: string) {
+        const task = this.data.get(index);
+
+        if (task) {
+            task.title = title;
+            this.data.save();
+        }
+    }
+
+    remove(index: number = this.currentIndex) {
+        if (index === this.data.count() - 1) {
+            this.up();
+        }
+
+        this.data.remove(index);
+    }
+
+    async interactive() {
+        while (true) {
+            await this.list(true);
+
+            const key = await this.terminal.readKeypress();
+
+            if (key === "\u001B\u005B\u0041" || key === "\u001B\u005B\u0044") { // вверх или влево
+                this.up();
+            } else if (key === "\u001B\u005B\u0042" || key === "\u001B\u005B\u0043") { // вниз или вправо
+                this.down();
+            } else if (key === "d" || key === " ") {
+                this.toggle();
+            } else if (key === "r") {
+                this.remove();
+            } else if (key === "a") {
+                const title = await this.terminal.prompt("Add task: ");
+
+                if (title) {
+                    await this.add(title);
+                }
+            } else if (key === "e") {
+                if (!this.current) {
+                    return;
+                }
+
+                const title = await this.terminal.prompt("Edit task (" + this.current.title + "): ");
+
+                if (title) {
+                    this.edit(this.currentIndex, title);
+                }
+            } else if (key == "\u0003") { // ctrl-c
+                Deno.exit();
+            }
+        }
     }
 }
