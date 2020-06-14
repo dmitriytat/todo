@@ -103,6 +103,8 @@ export class Todo {
                 this.down();
             } else if (key === "d" || key === " ") {
                 this.toggle();
+            } else if ('0' <= key && key <= '9') {
+                this.toggle(parseInt(key, 10));
             } else if (key === "r") {
                 this.remove();
             } else if (key === "a") {

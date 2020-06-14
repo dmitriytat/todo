@@ -1,3 +1,5 @@
+import { ensureFileSync, readJsonSync, writeJsonSync } from "../dep.ts";
+
 export class Data<T> {
   private items: T[] = [];
 
@@ -6,10 +8,10 @@ export class Data<T> {
   }
 
   open() {
-    let items = [];
+    let items: T[] = [];
     try {
-      const data = Deno.readTextFileSync(this.file);
-      items = JSON.parse(data);
+      ensureFileSync(this.file);
+      items = readJsonSync(this.file) as T[];
     } catch (e) {
     } finally {
       this.items = items;
@@ -17,8 +19,7 @@ export class Data<T> {
   }
 
   save() {
-    const data = JSON.stringify(this.items);
-    Deno.writeTextFileSync(this.file, data);
+    writeJsonSync(this.file, this.items, { spaces: 2 });
   }
 
   count() {
