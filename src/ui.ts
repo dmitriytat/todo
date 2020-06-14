@@ -1,11 +1,17 @@
-import { bold, green, red, yellow } from "../../dep.ts";
-import { Task } from "../Task.ts";
+import {
+  green,
+  red,
+  yellow,
+  bold,
+} from "https://deno.land/std@0.55.0/fmt/colors.ts";
+import { Task } from "./Task.ts";
 
-export const help = `run without params:
+export const help = `run without arguments:
 - to work in interactive mode
 
-run with params:
-ls - to show list of tasks
+run with arguments:
+help - to show available commands
+ls   - to show list of tasks
 
 add "task"        - to add task
 edit index "task" - to edit task
@@ -15,7 +21,11 @@ remove index      - to remove task`;
 
 const toolbar = `${yellow("d")}one ${yellow("a")}dd ${yellow("e")}dit ${yellow("r")}emove`;
 
-export function leftPad(message: string, length: number, character: string = " ",) {
+export function leftPad(
+  message: string,
+  length: number,
+  character: string = " ",
+) {
   if (message.length >= length) {
     return message;
   }
@@ -28,7 +38,11 @@ export function leftPad(message: string, length: number, character: string = " "
   return pad + message;
 }
 
-export function formatTaskList(tasks: Task[], showToolbar: boolean = false, activeIndex?: number): string {
+export function formatTaskList(
+  tasks: Task[],
+  showToolbar: boolean = false,
+  activeIndex?: number,
+): string {
   const title = `${bold("TODO LIST:")}`;
 
   const list = tasks.map((task, index) => {
